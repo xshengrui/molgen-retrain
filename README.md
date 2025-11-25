@@ -1,4 +1,4 @@
-# TS-GEN
+# MolGEN
 
 Implementation of [Flow matching for reaction pathway generation](https://arxiv.org/abs/2507.10530) by Ping Tuo*, Jiale Chen, Ju Li*.
 
@@ -59,6 +59,7 @@ But when using RGD1 database, one can choose to train with FM loss and finetune,
 python train-Transition1x-equivariant.py --tps_condition  --data_dir data/Transition1x/  --ckpt_freq 1  --epochs 2000 --run_name $workdir_name --cutoff 12 --val_epoch_freq 5 --x0std 1.0  --batch_size 64 --ratio_conditonal 1.0 --weight_loss_var_x0 0.0 --pbc --object_aware --path-type Linear  --KL L1 --lr_decay 
 
 ```
+- Use "--tps_condition" if you are training a model to predict the transition state; and use "--sim_condition" if you are training a model to predict the product.
 
 ## Model weights
 
