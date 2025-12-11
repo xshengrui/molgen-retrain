@@ -56,8 +56,12 @@ Commands similar to these were used to train the models presented in the paper.
 python train-Transition1x-equivariant.py --tps_condition  --data_dir data/Transition1x/  --ckpt_freq 1  --epochs 2000 --run_name $workdir_name --cutoff 12 --val_epoch_freq 5 --x0std 1.0  --batch_size 64 --ratio_conditonal 1.0 --weight_loss_var_x0 0.0 --pbc --object_aware --path-type Linear  --KL L1 --lr_decay 
 
 ```
-- When using Transition1x database, train the model with FM loss by "--KL L1", then fine-tune the model with KL divergence loss by "--KL symm"; But when using RGD1 database, one can choose to train with FM loss and finetune, or only use KL divergence loss from scratch.
-- Use "--tps_condition" if you are training a model to predict the transition state; And use "--sim_condition" if you are training a model to predict the product.
+- Loss functions:
+  - When using Transition1x database, train the model with FM loss by `--KL L1`, then fine-tune the model with KL divergence loss by `--KL symm`;
+  - But when using Transition1x + RGD1 database, one can choose to train with FM loss and finetune, or only use KL divergence loss from scratch.
+- Conditions:
+  - Use `--tps_condition` if you are training a model to predict the transition state;
+  - Use `--sim_condition` if you are training a model to predict the product.
 
 ## Model weights
 
