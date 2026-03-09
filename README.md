@@ -91,12 +91,12 @@ python Transition1x-inference.py $ckpt_path $output_dir
 
 | Symbol              | Shape / Value                                   |
 |---------------------|-------------------------------------------------|
-| $\nu_i$             | [$N_{\text{atoms}}, N_{\text{channels}}$]       |
-| $\phi_k(r_{ji})$    | [$N_{\text{edges}}, N_{\text{channels}}, N_{\text{radial basis}}$] |
-| $w_l(r_{ji})$       | [$N_{\text{edges}}, N_{\text{channels}}, d_l$]  |
-| $Y_l(\hat r_{ji})$  | [$N_{\text{edges}}, N_{\text{channels}}, 2l + 1$] |
-| $\mathcal{M}(j,i)$  | [$N_{\text{edges}}, N_{\text{channels}}, d_0 + d_1 \times 3 + d_2 \times 5$] |
-| $\mathbf{m}(j,i)$   | [$N_{\text{edges}}, N_{\text{channels}}, d_0 + d_1 + d_2$] |
+| $\nu_i$             | [ $N_{atoms}$, $N_{channels}$]       |
+| $\phi_k(r_{ji})$    | [ $N_{edges}$, $N_{channels}$, $N_{radial basis}$] |
+| $w_l(r_{ji})$       | [ $N_{edges}$, $N_{channels}$, $d_l$]  |
+| $Y_l(\hat r_{ji})$  | [ $N_{edges}$, $N_{channels}$, $2l + 1$] |
+| $\mathcal{M}(j,i)$  | [ $N_{edges}$, $N_{channels}$, $d_0 + d_1 \times 3 + d_2 \times 5$] |
+| $\mathbf{m}(j,i)$   | [ $N_{edges}$, $N_{channels}$, $d_0 + d_1 + d_2$] |
 | $N_{\text{channels}}$     | $128$                                      |
 | $N_{\text{radial basis}}$ | $96$                                       |
 | $d_0, d_1, d_2$     | $64, 48, 8$                                     |
