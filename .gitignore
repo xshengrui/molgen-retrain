@@ -9,3 +9,6 @@ slurm-*
 misc_notebooks/check*
 experiments
 *_cache
+*.zip
+*.pyc
+.sii
