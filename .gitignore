@@ -11,3 +11,4 @@ experiments
 *.zip
 *.pyc
 .sii
+*.pyc*
