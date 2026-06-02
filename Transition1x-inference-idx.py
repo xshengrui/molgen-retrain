@@ -202,3 +202,4 @@ with open(mapping_file, "w") as f:
     for rollout_id, rxn_name in rollout_mappings:  
         f.write(f"{rollout_id}\t{rxn_name}\n")  
 print(f"Saved rollout mappings to {mapping_file}")
+
