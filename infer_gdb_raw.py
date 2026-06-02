@@ -51,6 +51,12 @@ def parse_args():
         help="Root directory for inference outputs.",
     )
     parser.add_argument("--num-trials", type=int, default=30)
+    parser.add_argument(
+        "--trial-batch-size",
+        type=int,
+        default=1,
+        help="Number of stochastic trials for one reaction to infer in one GPU batch.",
+    )
     parser.add_argument("--inference-steps", type=int, default=50)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--start", type=int, default=0)
@@ -220,13 +226,13 @@ def make_batch(tar, dirname):
     }
 
 
-def collate_one(item):
+def collate_repeat(item, repeat):
     batch = {}
     for key, value in item.items():
         if torch.is_tensor(value):
-            batch[key] = value.unsqueeze(0)
+            batch[key] = value.unsqueeze(0).expand(repeat, *value.shape).clone()
         else:
-            batch[key] = [value]
+            batch[key] = [value] * repeat
     return batch
 
 
@@ -262,15 +268,20 @@ def rollout(model, batch):
     return positions
 
 
-def write_xyz_outputs(out_dir, batch, pred_pos, trial_idx, write_ref):
-    labels = torch.argmax(batch["species"], dim=3).squeeze(0).detach().cpu().numpy()
+def write_xyz_outputs(out_dir, batch, pred_pos, trial_idx, write_ref, batch_idx=0):
+    labels = (
+        torch.argmax(batch["species"], dim=3)[batch_idx]
+        .detach()
+        .cpu()
+        .numpy()
+    )
     symbols_by_frame = [
         [IDX_TO_SYMBOL[int(elem)] for elem in labels[frame_idx]]
         for frame_idx in range(labels.shape[0])
     ]
 
-    pred_pos_np = pred_pos[0].detach().cpu().numpy()
-    ref_pos_np = batch["x"][0].detach().cpu().numpy()
+    pred_pos_np = pred_pos[batch_idx].detach().cpu().numpy()
+    ref_pos_np = batch["x"][batch_idx].detach().cpu().numpy()
     cell = np.eye(3) * 25.0
 
     gen_file = out_dir / f"gentraj_{trial_idx}.xyz"
@@ -344,27 +355,41 @@ def run_tar(model, tar_path, out_root, device, args):
                 fmt="%d",
             )
 
-            for trial_idx in range(args.num_trials):
-                batch = move_to_device(collate_one(item), device)
+            for trial_start in range(0, args.num_trials, args.trial_batch_size):
+                trial_end = min(trial_start + args.trial_batch_size, args.num_trials)
+                current_batch_size = trial_end - trial_start
+                batch = move_to_device(collate_repeat(item, current_batch_size), device)
                 start_time = time.time()
                 try:
                     pred_pos = rollout(model, batch)
-                    write_xyz_outputs(
-                        rollout_dir,
-                        batch,
-                        pred_pos,
-                        trial_idx=trial_idx,
-                        write_ref=(trial_idx == 0),
-                    )
                 except Exception as exc:
-                    errors.append((rxn_name, f"trial_{trial_idx}", repr(exc)))
+                    errors.append((rxn_name, f"trials_{trial_start}_{trial_end - 1}", repr(exc)))
                     print(
-                        f"WARNING: inference failed for {rxn_name} trial {trial_idx}: {exc}",
+                        f"WARNING: inference failed for {rxn_name} trials "
+                        f"{trial_start}-{trial_end - 1}: {exc}",
                         flush=True,
                     )
                     continue
+
+                for batch_idx, trial_idx in enumerate(range(trial_start, trial_end)):
+                    try:
+                        write_xyz_outputs(
+                            rollout_dir,
+                            batch,
+                            pred_pos,
+                            trial_idx=trial_idx,
+                            write_ref=(trial_idx == 0),
+                            batch_idx=batch_idx,
+                        )
+                    except Exception as exc:
+                        errors.append((rxn_name, f"write_trial_{trial_idx}", repr(exc)))
+                        print(
+                            f"WARNING: writing failed for {rxn_name} trial {trial_idx}: {exc}",
+                            flush=True,
+                        )
                 print(
-                    f"  trial {trial_idx} finished in {time.time() - start_time:.2f}s",
+                    f"  trials {trial_start}-{trial_end - 1} "
+                    f"(batch={current_batch_size}) finished in {time.time() - start_time:.2f}s",
                     flush=True,
                 )
 
@@ -381,12 +406,16 @@ def run_tar(model, tar_path, out_root, device, args):
 
 def main():
     args = parse_args()
+    if args.trial_batch_size < 1:
+        raise ValueError("--trial-batch-size must be >= 1")
+
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     Path(args.out_root).mkdir(parents=True, exist_ok=True)
     (Path(args.out_root) / "README.md").write_text(
         f"Checkpoint: {args.ckpt}\n"
         f"Inference steps: {args.inference_steps}\n"
-        f"Trials per reaction: {args.num_trials}\n",
+        f"Trials per reaction: {args.num_trials}\n"
+        f"Trial batch size: {args.trial_batch_size}\n",
         encoding="utf-8",
     )
 
